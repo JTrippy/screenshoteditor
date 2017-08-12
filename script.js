@@ -241,9 +241,13 @@ function loadImage(){
     reader.onload = function(event){
         var img = new Image();
         img.onload = function(){
-            $("#pic-window").width(startX + img.width + 100);
-            $("#pic-window").height(startY + img.height + 100);
-            $(document).width($("#toolbox").width() + $("#pic-window").width());
+            if($("#pic-window").width() <= img.width){
+                $("#pic-window").width(startX + img.width + 100);
+                $(document).width($("#toolbox").width() + $("#pic-window").width());
+            }
+            if($("#pic-window").height() <= img.height){
+                $("#pic-window").height(startY + img.height + 100);
+            }
             $("#toolbox").offset({left:String($("#pic-window").width()),top:String($("#pic-window").offset().top)});
             $("#toolbox").height($("#pic-window").height());
             $("#guicontainer").width($("#toolbox").width() + $("#pic-window").width());
