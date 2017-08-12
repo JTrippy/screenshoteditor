@@ -383,9 +383,13 @@ function loadAndGlue() {
                 totalHeight += img.height;
                 imgLayer.draw();
                 if (imgId === fileData.length - 1) {
-                    $("#pic-window").height(imgGroup.position()['y'] + totalHeight + 100);
-                    $("#pic-window").width(imgGroup.position()['x'] + imgGroup.find('Image')[0].getAttr('width') + 100);
-                    $(document).width($("#toolbox").width() + $("#pic-window").width());
+                    if (img.width >= $("#pic-window").width()){
+                        $("#pic-window").width(imgGroup.position()['x'] + imgGroup.find('Image')[0].getAttr('width') + 100)
+                        $(document).width($("#toolbox").width() + $("#pic-window").width());
+                    }
+                    if (totalHeight >= $("#pic-window").height()){
+                        $("#pic-window").height(imgGroup.position()['y'] + totalHeight + 100);
+                    }
                     $("#toolbox").offset({left:String($("#pic-window").width()),top:String($("#pic-window").offset().top)});
                     $("#toolbox").height($("#pic-window").height());
                     $("#guicontainer").width($("#toolbox").width() + $("#pic-window").width());
