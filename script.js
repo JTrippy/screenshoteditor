@@ -235,6 +235,22 @@ function downloadImage() {
     }
 }
 
+function resize(width, height){
+    var image = imgGroup.get('Image')[0];
+    var topLeft = imgGroup.get('.topLeft')[0];
+    var bottomLeft = imgGroup.get('.bottomLeft')[0];
+    var topRight = imgGroup.get('.topRight')[0];
+    var bottomRight = imgGroup.get('.bottomRight')[0];
+    image.width(width);
+    image.height(height);
+    bottomLeft.setY(topLeft.getY() + height + 1);
+    bottomLeft.setX(topLeft.getX());
+    topRight.setY(topLeft.getY());
+    topRight.setX(topLeft.getX() + width);
+    bottomRight.setY(topLeft.getY() + height + 1);
+    bottomRight.setX(topLeft.getX() + width);
+    imgLayer.draw();
+}
 
 function loadImage(){
     var reader = new FileReader();
@@ -322,6 +338,10 @@ function loadImage(){
            chat = $("#chat").val();
            colorcode = colorCode
        }
+    });
+    $("#resize").toggleClass('disabled');
+    $("#resize").click(function(){
+        resize(Number($("#width").val()), Number($("#height").val()));
     });
     $("#download").toggleClass('disabled');
     $("#download").click(function(){
@@ -455,12 +475,12 @@ function editGUI(type) {
     $("#toolbox").append('<span class="glyphicon glyphicon-scissors" style="color:white;margin:3% 3% 3% 3%"> ' +
         '<span style="color:white;font-family:\'Raleway\',sans-serif;font-size:18px;font-weight:bold">Tools</span>' +
         '</span><div style="margin:3% 3% 3% 3%;border:2px dashed white;padding:10px 10px 10px 10px;border-radius:5px 5px 5px 5px;box-shadow:0 1px 5px rgba(0,0,0,0.46);">' +
-        '<h4 style="font-family:\'Raleway\', sans-serif;color:white;">Picture Info</h4>' +
+        '<h4 style="font-family:\'Raleway\', sans-serif;color:white;">Picture Info & Resize</h4>' +
         '<span class="glyphicon glyphicon-resize-full" style="color:white;"> <label style="font-family:\'Raleway\', sans-serif;color:white;font-size:14px;"' +
-        '>Width:</label> <input type="text" id="width" name="width" disabled style="background-color:#2B2B2B;color:white;border:1px solid white;" size="4"> <span class="glyphicon glyphicon-link" style="color:white"></span> ' +
+        '>Width:</label> <input type="text" id="width" name="width" style="background-color:#2B2B2B;color:white;border:1px solid white;" size="4"> <span class="glyphicon glyphicon-link" style="color:white"></span> ' +
         '<label style="font-family:\'Raleway\', sans-serif;color:white;font-size:14px;">Height:</label> <input type="text" ' +
-        'id="height" disabled name="height" style="background-color:#2B2B2B;color:white;border:1px solid white;" size="4">  ' +
-        '</span><br><h4 style="font-family:\'Raleway\', sans-serif;color:white;">Text Position (X,Y)</h4>' +
+        'id="height" name="height" style="background-color:#2B2B2B;color:white;border:1px solid white;" size="4">  ' +
+        '</span> <button id="resize" class="btn btn-primary btn-sm disabled">Resize</button><br><h4 style="font-family:\'Raleway\', sans-serif;color:white;">Text Position (X,Y)</h4>' +
         '<span class="glyphicon glyphicon-resize-horizontal" style="color:white"></span>  <input type="text" id="xpos" style="background-color:#2B2B2B;color:white;border' +
         ':1px solid white;" size="4" placeholder="X"> <span class="glyphicon glyphicon-resize-vertical" style="color:white"></span> <input type="text" id="ypos" placeholder="Y"' +
         ' size="4" style="background-color:#2B2B2B;color:white;border:1px solid white;">  ' +
