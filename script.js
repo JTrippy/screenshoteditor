@@ -17,6 +17,8 @@ var downloadFlag = 0;
 var totalHeight = 0;
 var imgId = -1;
 var dataInfo;
+var cropStatus = false;
+var cropLayer;
 
 function updateChat(target) {
     var textDraws = imgStage.find('.chatText');
@@ -251,6 +253,236 @@ function resize(width, height){
     bottomRight.setX(topLeft.getX() + width);
     imgLayer.draw();
 }
+function updateCropAnchor(activeAnchor) {
+    var layer = activeAnchor.getLayer();
+    var topLeft = layer.find('.cropTopLeft')[0];
+    var topRight = layer.find('.cropTopRight')[0];
+    var bottomRight = layer.find('.cropBottomRight')[0];
+    var bottomLeft = layer.find('.cropBottomLeft')[0];
+    var rect = layer.find('Rect')[0];
+    var anchorX = activeAnchor.getX();
+    var anchorY = activeAnchor.getY();
+    // update anchor positions
+    switch (activeAnchor.getName()) {
+        case 'cropTopLeft':
+            topRight.setY(anchorY);
+            bottomLeft.setX(anchorX);
+            break;
+        case 'cropTopRight':
+            topLeft.setY(anchorY);
+            bottomRight.setX(anchorX);
+            break;
+        case 'cropBottomRight':
+            bottomLeft.setY(anchorY);
+            topRight.setX(anchorX);
+            break;
+        case 'cropBottomLeft':
+            bottomRight.setY(anchorY);
+            topLeft.setX(anchorX);
+            break;
+    }
+    rect.position(topLeft.position());
+    var width = topRight.getX() - topLeft.getX();
+    var height = bottomLeft.getY() - topLeft.getY();
+    if(width && height) {
+        rect.width(width);
+        rect.height(height);
+    }
+}
+
+function addCropAnchor(xpos, ypos, layer, name, rect) {
+    var anchor = new Konva.Circle({
+        x: xpos,
+        y: ypos,
+        stroke: '#0a0a0a',
+        fill: '#585858',
+        strokeWidth: 2,
+        radius: 8,
+        name: name,
+        draggable: true,
+        dragOnTop: false,
+        dragBoundFunc: function(pos) {
+            var positions = {};
+            if (pos.x >= imgGroup.getX() + imgGroup.get('.topLeft')[0].getX() && pos.x + 8 <= imgGroup.getX() + imgGroup.get('.topRight')[0].getX()) {
+                positions.x = pos.x;
+            }
+            else {
+                if (pos.x >= imgGroup.getX() + imgGroup.get('.topLeft')[0].getX()) {
+                    positions.x = imgGroup.getX() + imgGroup.get('.topRight')[0].getX();
+                }
+                else {
+                    positions.x = imgGroup.getX() + imgGroup.get('.topLeft')[0].getX();
+                }
+            }
+            if (pos.y >= imgGroup.getY() + imgGroup.get('.topLeft')[0].getY() && pos.y + 8 <= imgGroup.getY() + imgGroup.get('.bottomLeft')[0].getY()) {
+                positions.y = pos.y;
+            }
+            else {
+                if (pos.y >= imgGroup.getY() + imgGroup.get('.topLeft')[0].getY()) {
+                    positions.y = imgGroup.getY() + imgGroup.get('.bottomLeft')[0].getY();
+                }
+                else {
+                    positions.y = imgGroup.getY() + imgGroup.get('.topLeft')[0].getY();
+                }
+            }
+            return positions
+        }
+    });
+    anchor.on('dragmove', function() {
+        updateCropAnchor(this);
+        layer.draw();
+    });
+    anchor.on('mousedown touchstart', function() {
+        rect.setDraggable(false);
+        this.moveToTop();
+    });
+    anchor.on('dragend', function() {
+        rect.setDraggable(true);
+        layer.draw();
+    });
+    // add hover styling
+    anchor.on('mouseover', function() {
+        var layer = this.getLayer();
+        document.body.style.cursor = 'pointer';
+        this.setStrokeWidth(4);
+        layer.draw();
+    });
+    anchor.on('mouseout', function() {
+        var layer = this.getLayer();
+        document.body.style.cursor = 'default';
+        this.setStrokeWidth(2);
+        layer.draw();
+    });
+    layer.add(anchor);
+    anchor.moveToTop();
+}
+
+function cancelCrop() {
+    if (cropStatus) {
+        for (var i = cropLayer.find('Circle').length - 1; i >= 0 ; i--) {
+            cropLayer.find('Circle')[i].destroy();
+            cropLayer.draw();
+        }
+        for (var j = cropLayer.find('Rect').length - 1; j >= 0 ; j--) {
+            cropLayer.find('Rect')[j].destroy();
+            cropLayer.draw();
+        }
+        imgLayer.moveToTop();
+        for (var k = imgGroup.find('Circle').length - 1; k >= 0 ; k--) {
+            imgGroup.find('Circle')[k].setAttrs({
+                draggable: true,
+                listening: true
+            });
+            imgGroup.find('Circle')[k].show();
+            imgLayer.draw();
+        }
+        imgGroup.setDraggable(true);
+        $("#cancelCrop").toggleClass('disabled');
+        cropStatus = false;
+    }
+}
+
+function crop() {
+    if (!cropStatus) {
+        var cropRect = new Konva.Rect({
+            x: imgGroup.getX() + imgGroup.get('.topLeft')[0].getX(),
+            y: imgGroup.getY() + imgGroup.get('.topLeft')[0].getY(),
+            fill:'#004080',
+            stroke:'#00264d',
+            name: 'crop',
+            opacity: 0.5,
+            draggable: true,
+            height: imgGroup.get('Image')[0].height(),
+            width: imgGroup.get('Image')[0].width(),
+            dragBoundFunc: function(pos) {
+                var positions = {};
+                var topLeft = cropLayer.find('.cropTopLeft')[0];
+                var topRight = cropLayer.find('.cropTopRight')[0];
+                var bottomRight = cropLayer.find('.cropBottomRight')[0];
+                var bottomLeft = cropLayer.find('.cropBottomLeft')[0];
+                if (pos.x >= imgGroup.getX() + imgGroup.get('.topLeft')[0].getX() && pos.x + this.width() <= imgGroup.getX() + imgGroup.get('.topRight')[0].getX()) {
+                    positions.x = pos.x;
+                }
+                else {
+                    if (pos.x >= imgGroup.getX() + imgGroup.get('.topLeft')[0].getX()) {
+                        positions.x = imgGroup.getX() + imgGroup.get('.topRight')[0].getX() - this.width();
+                    }
+                    else {
+                        positions.x = imgGroup.getX() + imgGroup.get('.topLeft')[0].getX();
+                    }
+                }
+                if (pos.y >= imgGroup.getY() + imgGroup.get('.topLeft')[0].getY() && pos.y + this.height() <= imgGroup.getY() + imgGroup.get('.bottomLeft')[0].getY()) {
+                    positions.y = pos.y;
+                }
+                else {
+                    if (pos.y >= imgGroup.getY() + imgGroup.get('.topLeft')[0].getY()) {
+                        positions.y = imgGroup.getY() + imgGroup.get('.bottomLeft')[0].getY() - this.height();
+                    }
+                    else {
+                        positions.y = imgGroup.getY() + imgGroup.get('.topLeft')[0].getY();
+                    }
+                }
+                topLeft.setY(positions.y);
+                topLeft.setX(positions.x);
+                bottomLeft.setX(positions.x);
+                bottomLeft.setY(positions.y + this.height());
+                topRight.setX(positions.x + this.width());
+                topRight.setY(positions.y);
+                bottomRight.setX(positions.x + this.width());
+                bottomRight.setY(positions.y + this.height());
+                return positions
+            }
+        });
+        cropLayer.add(cropRect);
+        imgGroup.setDraggable(false);
+        for (var i = 0; i < imgGroup.find('Circle').length; i++) {
+            imgGroup.find('Circle')[i].setAttrs({
+                draggable: false,
+                listening:false
+            });
+            imgGroup.find('Circle')[i].hide();
+        }
+        imgLayer.draw();
+        addCropAnchor(cropRect.getX(), cropRect.getY(), cropLayer, 'cropTopLeft', cropRect);
+        addCropAnchor(cropRect.getX() + cropRect.width(), cropRect.getY(), cropLayer, 'cropTopRight', cropRect);
+        addCropAnchor(cropRect.getX(), cropRect.getY() + cropRect.height(), cropLayer, 'cropBottomLeft', cropRect);
+        addCropAnchor(cropRect.getX() + cropRect.width(), cropRect.getY() + cropRect.height(), cropLayer, 'cropBottomRight', cropRect);
+        cropLayer.moveToTop();
+        cropLayer.draw();
+        cropStatus = true;
+        $("#cancelCrop").toggleClass('disabled');
+    }
+    else {
+        var cropTopLeft = imgStage.find('.cropTopLeft')[0];
+        var topLeft = imgGroup.find('.topLeft')[0];
+        var bottomLeft = imgGroup.find('.bottomLeft')[0];
+        var topRight = imgGroup.find('.topRight')[0];
+        var bottomRight = imgGroup.find('.bottomRight')[0];
+        var xpos = cropTopLeft.getX() - imgGroup.getX() - topLeft.getX();
+        var ypos = cropTopLeft.getY() - imgGroup.getY() - topLeft.getY();
+        var width = imgStage.find('.crop')[0].width();
+        var height = imgStage.find('.crop')[0].height();
+        imageObj.crop({
+           x: xpos,
+           y: ypos,
+           width: width,
+           height: height
+        });
+        imageObj.height(height);
+        imageObj.width(width);
+        imageObj.setX(topLeft.getX());
+        imageObj.setY(topLeft.getY());
+        bottomLeft.setY(topLeft.getY() + height);
+        bottomLeft.setX(topLeft.getX());
+        topRight.setY(topLeft.getY());
+        topRight.setX(topLeft.getX() + width);
+        bottomRight.setX(topLeft.getX() + width);
+        bottomRight.setY(topLeft.getY() + height);
+        $("#height").val(String(height));
+        $("#width").val(String(width));
+        cancelCrop();
+    }
+}
 
 function loadImage(){
     var reader = new FileReader();
@@ -301,6 +533,8 @@ function loadImage(){
             imgLayer.draw();
             $("#width").val(String(img.width));
             $("#height").val(String(img.height));
+            cropLayer = new Konva.Layer();
+            imgStage.add(cropLayer);
         };
         img.src = event.target.result;
     };
@@ -339,6 +573,10 @@ function loadImage(){
            colorcode = colorCode
        }
     });
+    $("#crop").toggleClass('disabled');
+    $("#crop").click(function(){
+        crop();
+    });
     $("#resize").toggleClass('disabled');
     $("#resize").click(function(){
         resize(Number($("#width").val()), Number($("#height").val()));
@@ -349,6 +587,9 @@ function loadImage(){
     });
     $("#bold").prop('disabled',false);
     $("#bold").prop('checked', true);
+    $("#cancelCrop").click(function(){
+        cancelCrop();
+    });
 }
 
 function glueDownload(){
@@ -474,13 +715,15 @@ function editGUI(type) {
     });
     $("#toolbox").append('<span class="glyphicon glyphicon-scissors" style="color:white;margin:3% 3% 3% 3%"> ' +
         '<span style="color:white;font-family:\'Raleway\',sans-serif;font-size:18px;font-weight:bold">Tools</span>' +
-        '</span><div style="margin:3% 3% 3% 3%;border:2px dashed white;padding:10px 10px 10px 10px;border-radius:5px 5px 5px 5px;box-shadow:0 1px 5px rgba(0,0,0,0.46);">' +
-        '<h4 style="font-family:\'Raleway\', sans-serif;color:white;">Picture Info & Resize</h4>' +
+        '</span><div style="margin:0% 3% 0% 3%;border:2px dashed white;padding:10px 10px 10px 10px;border-radius:5px 5px 5px 5px;box-shadow:0 1px 5px rgba(0,0,0,0.46);">' +
+        '<h4 style="font-family:\'Raleway\', sans-serif;color:white;">Picture Info, Resize & Crop</h4>' +
         '<span class="glyphicon glyphicon-resize-full" style="color:white;"> <label style="font-family:\'Raleway\', sans-serif;color:white;font-size:14px;"' +
         '>Width:</label> <input type="text" id="width" name="width" style="background-color:#2B2B2B;color:white;border:1px solid white;" size="4"> <span class="glyphicon glyphicon-link" style="color:white"></span> ' +
         '<label style="font-family:\'Raleway\', sans-serif;color:white;font-size:14px;">Height:</label> <input type="text" ' +
         'id="height" name="height" style="background-color:#2B2B2B;color:white;border:1px solid white;" size="4">  ' +
-        '</span> <button id="resize" class="btn btn-primary btn-sm disabled">Resize</button><br><h4 style="font-family:\'Raleway\', sans-serif;color:white;">Text Position (X,Y)</h4>' +
+        '</span> <button id="resize" class="btn btn-primary btn-sm disabled">Resize</button><br><i class="material-icons md-18" style="color:white;">crop</i> <button class="btn btn-primary btn-sm disabled" id="crop" >Crop</button> ' +
+        '<button class="btn btn-primary btn-sm disabled" id="cancelCrop">Cancel Crop</button>' +
+        '<br><h4 style="font-family:\'Raleway\', sans-serif;color:white;">Text Position (X,Y)</h4>' +
         '<span class="glyphicon glyphicon-resize-horizontal" style="color:white"></span>  <input type="text" id="xpos" style="background-color:#2B2B2B;color:white;border' +
         ':1px solid white;" size="4" placeholder="X"> <span class="glyphicon glyphicon-resize-vertical" style="color:white"></span> <input type="text" id="ypos" placeholder="Y"' +
         ' size="4" style="background-color:#2B2B2B;color:white;border:1px solid white;">  ' +
